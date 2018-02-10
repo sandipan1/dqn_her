@@ -1,4 +1,4 @@
 
-from gym_BitFlipper.envs.BitFlipper_env import BitFlipperEnv
+from dqn_her.envs.BitFlipper_env import BitFlipperEnv
 
 
