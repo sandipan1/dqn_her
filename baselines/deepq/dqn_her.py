@@ -232,7 +232,7 @@ def learn(env,
                     rew1 = env.compute_reward(new_obs1,goal_prime)
                     replay_buffer.add(np.concatenate(obs1,goal_prime), action1, rew1, np.concatenate(new_obs1,goal_prime), float(done1))
                 episode_buffer.clear()   
-                obs = env.reset(np.seed=random.randint(0,1000))
+                obs = env.reset(seed=np.random.randint(0,1000))
                 env.render()
                 episode_rewards.append(0.0)
                 #############Training Q
