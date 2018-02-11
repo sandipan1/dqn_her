@@ -215,7 +215,7 @@ def learn(env,
                 if callback(locals(), globals()):
                     break
             # Take action and update exploration to the newest value
-            action = act(np.array(obs)[None], update_eps=exploration.value(t))[0]
+            action = act(np.concatenate(obs,env.goal)[None], update_eps=exploration.value(t))[0]
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
