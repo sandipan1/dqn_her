@@ -221,7 +221,7 @@ def learn(env,
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
             replay_buffer.add(np.concatenate([obs,env.goal]), action, rew, np.concatenate([new_obs,env.goal]), float(done))
             obs = new_obs
-            
+            #env.render()
             episode_rewards[-1] += rew
             num_episodes = len(episode_rewards)
             #######end of episode
@@ -237,7 +237,6 @@ def learn(env,
                 episode_rewards.append(0.0)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
-                    print("trainig"+str(num_episodes))
                     for i in range(num_optimisation_steps):
                         # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
                         if prioritized_replay:
@@ -252,7 +251,6 @@ def learn(env,
                             replay_buffer.update_priorities(batch_idxes, new_priorities)
                 #############Training Q target
                 if t > learning_starts and num_episodes % target_network_update_freq == 0:
-                    print("target trainig"+str(num_episodes))
                     # Update target network periodically.
                     update_target()
 
