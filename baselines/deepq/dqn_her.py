@@ -167,7 +167,7 @@ def learn(env,
     sess.__enter__()
 
     def make_obs_ph(name):
-        return U.BatchInput(env.observation_space.shape*2, name=name)
+        return U.BatchInput((env.observation_space.shape[0]*2,), name=name)
 
     act, train, update_target, debug = deepq.build_train(
         make_obs_ph=make_obs_ph,
@@ -205,7 +205,6 @@ def learn(env,
     episode_rewards = [0.0]
     saved_mean_reward = None
     obs = env.reset(seed=np.random.randint(0,1000))
-    env.render()
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
         model_file = os.path.join(td, "model")
@@ -215,13 +214,12 @@ def learn(env,
                 if callback(locals(), globals()):
                     break
             # Take action and update exploration to the newest value
-            action = act(np.array(obs)[None], update_eps=exploration.value(t))[0]
+            action = act(np.concatenate([obs,env.goal])[None], update_eps=exploration.value(t))[0]
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
-            replay_buffer.add(np.concatenate(obs,env.goal), action, rew, np.concatenate(new_obs,env.goal), float(done))
+            replay_buffer.add(np.concatenate([obs,env.goal]), action, rew, np.concatenate([new_obs,env.goal]), float(done))
             obs = new_obs
-            
             episode_rewards[-1] += rew
             num_episodes = len(episode_rewards)
             #######end of episode
@@ -229,15 +227,13 @@ def learn(env,
                 goal_prime = obs
                 for episode in episode_buffer:
                     obs1,action1,_,new_obs1,done1 = episode
-                    rew1 = env.compute_reward(new_obs1,goal_prime)
-                    replay_buffer.add(np.concatenate(obs1,goal_prime), action1, rew1, np.concatenate(new_obs1,goal_prime), float(done1))
+                    rew1 = env.calculate_reward(new_obs1,goal_prime)
+                    replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
-                env.render()
                 episode_rewards.append(0.0)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
-                    print("trainig"+str(num_episodes))
                     for i in range(num_optimisation_steps):
                         # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
                         if prioritized_replay:
@@ -252,7 +248,6 @@ def learn(env,
                             replay_buffer.update_priorities(batch_idxes, new_priorities)
                 #############Training Q target
                 if t > learning_starts and num_episodes % target_network_update_freq == 0:
-                    print("target trainig"+str(num_episodes))
                     # Update target network periodically.
                     update_target()
 
