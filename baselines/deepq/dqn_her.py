@@ -4,7 +4,7 @@ import dill
 import tempfile
 import tensorflow as tf
 import zipfile
-
+import random
 import baselines.common.tf_util as U
 
 from baselines import logger
@@ -167,7 +167,7 @@ def learn(env,
     sess.__enter__()
 
     def make_obs_ph(name):
-        return U.BatchInput(env.observation_space.shape, name=name)
+        return U.BatchInput((env.observation_space.shape*2,), name=name)
 
     act, train, update_target, debug = deepq.build_train(
         make_obs_ph=make_obs_ph,
@@ -192,6 +192,7 @@ def learn(env,
                                        final_p=1.0)
     else:
         replay_buffer = ReplayBuffer(buffer_size)
+        episode_buffer = ReplayBuffer(env.n)
         beta_schedule = None
     # Create the schedule for exploration starting from 1.
     exploration = LinearSchedule(schedule_timesteps=int(exploration_fraction * max_timesteps),
@@ -204,7 +205,7 @@ def learn(env,
 
     episode_rewards = [0.0]
     saved_mean_reward = None
-    obs = env.reset()
+    obs = env.reset(seed=random.randint(0,1000))
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
         model_file = os.path.join(td, "model")
@@ -221,7 +222,7 @@ def learn(env,
 
             episode_rewards[-1] += rew
             if done:
-                obs = env.reset()
+                obs = env.reset(seed=random.randint(0,1000))
                 episode_rewards.append(0.0)
 
             if t > learning_starts and t % train_freq == 0:
