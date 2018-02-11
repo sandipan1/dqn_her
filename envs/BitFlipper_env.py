@@ -54,8 +54,9 @@ class BitFlipperEnv(gym.Env):
       return print_str 
   
   def seed(self, seed=None):
-    self.np_random, seed = seeding.np_random(seed)
-    return [seed]
+    #self.np_random, seed = seeding.np_random(seed)
+    #return [seed]
+    pass
   
   def bitflip(self,index):
     s2=np.array(self.state)
