@@ -205,7 +205,6 @@ def learn(env,
     episode_rewards = [0.0]
     saved_mean_reward = None
     obs = env.reset(seed=np.random.randint(0,1000))
-    env.render()
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
         model_file = os.path.join(td, "model")
@@ -221,7 +220,6 @@ def learn(env,
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
             replay_buffer.add(np.concatenate([obs,env.goal]), action, rew, np.concatenate([new_obs,env.goal]), float(done))
             obs = new_obs
-            #env.render()
             episode_rewards[-1] += rew
             num_episodes = len(episode_rewards)
             #######end of episode
@@ -233,7 +231,6 @@ def learn(env,
                     replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
-                env.render()
                 episode_rewards.append(0.0)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
