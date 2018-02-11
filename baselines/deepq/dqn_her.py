@@ -4,7 +4,6 @@ import dill
 import tempfile
 import tensorflow as tf
 import zipfile
-import random
 import baselines.common.tf_util as U
 
 from baselines import logger
@@ -205,7 +204,7 @@ def learn(env,
 
     episode_rewards = [0.0]
     saved_mean_reward = None
-    obs = env.reset(seed=random.randint(0,1000))
+    obs = env.reset(seed=np.random.randint(0,1000))
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
         model_file = os.path.join(td, "model")
@@ -217,30 +216,32 @@ def learn(env,
             action = act(np.array(obs)[None], update_eps=exploration.value(t))[0]
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
-            replay_buffer.add(obs, action, rew, new_obs, float(done))
+            episode_buffer.add(obs, action, rew, new_obs, float(done))
+            replay_buffer.add(np.concatenate(obs,env.goal), action, rew, np.concatenate(new_obs,env.goal), float(done))
             obs = new_obs
 
             episode_rewards[-1] += rew
+            #######end of episode
             if done:
-                obs = env.reset(seed=random.randint(0,1000))
+                obs = env.reset(np.seed=random.randint(0,1000))
                 episode_rewards.append(0.0)
-
-            if t > learning_starts and t % train_freq == 0:
-                # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
-                if prioritized_replay:
-                    experience = replay_buffer.sample(batch_size, beta=beta_schedule.value(t))
-                    (obses_t, actions, rewards, obses_tp1, dones, weights, batch_idxes) = experience
-                else:
-                    obses_t, actions, rewards, obses_tp1, dones = replay_buffer.sample(batch_size)
-                    weights, batch_idxes = np.ones_like(rewards), None
-                td_errors = train(obses_t, actions, rewards, obses_tp1, dones, weights)
-                if prioritized_replay:
-                    new_priorities = np.abs(td_errors) + prioritized_replay_eps
-                    replay_buffer.update_priorities(batch_idxes, new_priorities)
-
-            if t > learning_starts and t % target_network_update_freq == 0:
-                # Update target network periodically.
-                update_target()
+                #############Training Q
+                if t > learning_starts and num_episodes % train_freq == 0:
+                    # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
+                    if prioritized_replay:
+                        experience = replay_buffer.sample(batch_size, beta=beta_schedule.value(t))
+                        (obses_t, actions, rewards, obses_tp1, dones, weights, batch_idxes) = experience
+                    else:
+                        obses_t, actions, rewards, obses_tp1, dones = replay_buffer.sample(batch_size)
+                        weights, batch_idxes = np.ones_like(rewards), None
+                    td_errors = train(obses_t, actions, rewards, obses_tp1, dones, weights)
+                    if prioritized_replay:
+                        new_priorities = np.abs(td_errors) + prioritized_replay_eps
+                        replay_buffer.update_priorities(batch_idxes, new_priorities)
+                #############Training Q target
+                if t > learning_starts and num_episodes % target_network_update_freq == 0:
+                    # Update target network periodically.
+                    update_target()
 
             mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
             num_episodes = len(episode_rewards)
