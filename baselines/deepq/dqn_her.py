@@ -219,7 +219,7 @@ def learn(env,
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
-            replay_buffer.add(np.concatenate(obs,env.goal), action, rew, np.concatenate(new_obs,env.goal), float(done))
+            replay_buffer.add(np.array(np.concatenate(obs,env.goal))[None], action, rew, np.concatenate(new_obs,env.goal), float(done))
             obs = new_obs
             
             episode_rewards[-1] += rew
