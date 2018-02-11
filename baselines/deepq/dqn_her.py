@@ -229,7 +229,7 @@ def learn(env,
                 goal_prime = obs
                 for episode in episode_buffer:
                     obs1,action1,_,new_obs1,done1 = episode
-                    rew1 = env.compute_reward(new_obs1,goal_prime)
+                    rew1 = env.calculate_reward(new_obs1,goal_prime)
                     replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
