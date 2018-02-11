@@ -215,11 +215,11 @@ def learn(env,
                 if callback(locals(), globals()):
                     break
             # Take action and update exploration to the newest value
-            action = act(np.concatenate(obs,env.goal), update_eps=exploration.value(t))[0]
+            action = act(np.concatenate([obs,env.goal])[None], update_eps=exploration.value(t))[0]
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
             episode_buffer.append((obs, action, rew, new_obs, float(done)))
-            replay_buffer.add(np.array(np.concatenate(obs,env.goal))[None], action, rew, np.concatenate(new_obs,env.goal), float(done))
+            replay_buffer.add(np.concatenate([obs,env.goal]), action, rew, np.concatenate([new_obs,env.goal]), float(done))
             obs = new_obs
             
             episode_rewards[-1] += rew
@@ -230,7 +230,7 @@ def learn(env,
                 for episode in episode_buffer:
                     obs1,action1,_,new_obs1,done1 = episode
                     rew1 = env.compute_reward(new_obs1,goal_prime)
-                    replay_buffer.add(np.concatenate(obs1,goal_prime), action1, rew1, np.concatenate(new_obs1,goal_prime), float(done1))
+                    replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 env.render()
