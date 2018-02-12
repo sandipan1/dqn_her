@@ -232,7 +232,7 @@ def learn(env,
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 episode_rewards.append(0.0)
-                epsiode_max_rewards.append(env.max_reward)
+                episode_max_rewards.append(env.max_reward)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
                     for i in range(num_optimisation_steps):
