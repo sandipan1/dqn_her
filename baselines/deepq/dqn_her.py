@@ -224,7 +224,6 @@ def learn(env,
             obs = new_obs
             episode_rewards[-1] += rew
             num_episodes = len(episode_rewards)
-            print(num_episodes,episode_timestep)
             #######end of episode
             if done:
                 goal_prime = obs
@@ -232,7 +231,7 @@ def learn(env,
                     obs1,action1,_,new_obs1,done1 = episode_buffer[episode]
                     rew1 = env.calculate_reward(new_obs1,goal_prime)
                     replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
-                episode_timsestep = 0   
+                episode_timestep = 0   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 episode_rewards.append(0.0)
                 episode_max_rewards.append(env.reward_max)
