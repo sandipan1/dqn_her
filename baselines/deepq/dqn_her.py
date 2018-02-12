@@ -203,7 +203,7 @@ def learn(env,
     update_target()
     episode_max_rewards = [env.reward_max]
     episode_rewards = [0.0]
-    saved_mean_reward = None
+    saved_mean_reward_diff = None # difference in saved reward
     obs = env.reset(seed=np.random.randint(0,1000))
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
@@ -264,16 +264,16 @@ def learn(env,
 
             if (checkpoint_freq is not None and t > learning_starts and
                     num_episodes > 100 and t % checkpoint_freq == 0):
-                if saved_mean_reward is None or mean_100ep_reward > saved_mean_reward:
+                if saved_mean_reward_diff is None or mean_100ep_max_reward-mean_100ep_reward > saved_mean_reward_diff:
                     if print_freq is not None:
                         logger.log("Saving model due to mean reward increase: {} -> {}".format(
-                                   saved_mean_reward, mean_100ep_reward))
+                                   saved_mean_reward_diff, mean_100ep_reward))
                     U.save_state(model_file)
                     model_saved = True
-                    saved_mean_reward = mean_100ep_reward
+                    saved_mean_reward_diff = mean_100ep_reward
         if model_saved:
             if print_freq is not None:
-                logger.log("Restored model with mean reward: {}".format(saved_mean_reward))
+                logger.log("Restored model with mean reward: {}".format(saved_mean_reward_diff))
             U.load_state(model_file)
 
     return ActWrapper(act, act_params)
