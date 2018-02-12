@@ -267,7 +267,7 @@ def learn(env,
                 if saved_mean_reward_diff is None or mean_100ep_max_reward-mean_100ep_reward < saved_mean_reward_diff:
                     if print_freq is not None:
                         logger.log("Saving model due to mean reward difference decrease: {} -> {}".format(
-                                   saved_mean_reward_diff, mean_100ep_reward))
+                                   saved_mean_reward_diff, mean_100ep_max_reward-mean_100ep_reward))
                     U.save_state(model_file)
                     model_saved = True
                     saved_mean_reward_diff = mean_100ep_max_reward-mean_100ep_reward
