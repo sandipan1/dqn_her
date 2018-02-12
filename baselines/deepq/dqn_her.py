@@ -201,7 +201,7 @@ def learn(env,
     # Initialize the parameters and copy them to the target network.
     U.initialize()
     update_target()
-
+    episode_max_rewards = [env.reward_max]
     episode_rewards = [0.0]
     saved_mean_reward = None
     obs = env.reset(seed=np.random.randint(0,1000))
@@ -232,6 +232,7 @@ def learn(env,
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 episode_rewards.append(0.0)
+                epsiode_max_rewards.append(env.max_reward)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
                     for i in range(num_optimisation_steps):
@@ -252,11 +253,12 @@ def learn(env,
                     update_target()
 
             mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
-            
+            mean_100ep_max_reward = round(np.mean(episode_max_rewards[-101:-1]), 1)
             if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
                 logger.record_tabular("steps", t)
                 logger.record_tabular("episodes", num_episodes)
                 logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+                logger.record_tabular("mean 100 episode max reward", mean_100ep_max_reward)
                 logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
                 logger.dump_tabular()
 
