@@ -224,6 +224,7 @@ def learn(env,
             obs = new_obs
             episode_rewards[-1] += rew
             num_episodes = len(episode_rewards)
+            print(num_episodes,episode_timestep)
             #######end of episode
             if done:
                 goal_prime = obs
