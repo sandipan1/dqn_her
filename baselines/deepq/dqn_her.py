@@ -201,9 +201,9 @@ def learn(env,
     # Initialize the parameters and copy them to the target network.
     U.initialize()
     update_target()
-
+    episode_max_rewards = [env.reward_max]
     episode_rewards = [0.0]
-    saved_mean_reward = None
+    saved_mean_reward_diff = None # difference in saved reward
     obs = env.reset(seed=np.random.randint(0,1000))
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
@@ -232,6 +232,7 @@ def learn(env,
                 episode_buffer.clear()   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 episode_rewards.append(0.0)
+                episode_max_rewards.append(env.reward_max)
                 #############Training Q
                 if t > learning_starts and num_episodes % train_freq == 0:
                     for i in range(num_optimisation_steps):
@@ -251,27 +252,28 @@ def learn(env,
                     # Update target network periodically.
                     update_target()
 
-            mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
-            
+            mean_100ep_reward = np.mean(episode_rewards[-101:-1])
+            mean_100ep_max_reward = np.mean(episode_max_rewards[-101:-1])
             if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
                 logger.record_tabular("steps", t)
                 logger.record_tabular("episodes", num_episodes)
                 logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+                logger.record_tabular("mean 100 episode max reward", mean_100ep_max_reward)
                 logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
                 logger.dump_tabular()
 
             if (checkpoint_freq is not None and t > learning_starts and
-                    num_episodes > 100 and t % checkpoint_freq == 0):
-                if saved_mean_reward is None or mean_100ep_reward > saved_mean_reward:
+                    num_episodes > 100 and num_episodes % checkpoint_freq == 0):
+                if saved_mean_reward_diff is None or mean_100ep_max_reward-mean_100ep_reward < saved_mean_reward_diff:
                     if print_freq is not None:
-                        logger.log("Saving model due to mean reward increase: {} -> {}".format(
-                                   saved_mean_reward, mean_100ep_reward))
+                        logger.log("Saving model due to mean reward difference decrease: {} -> {}".format(
+                                   saved_mean_reward_diff, mean_100ep_max_reward-mean_100ep_reward))
                     U.save_state(model_file)
                     model_saved = True
-                    saved_mean_reward = mean_100ep_reward
+                    saved_mean_reward_diff = mean_100ep_max_reward-mean_100ep_reward
         if model_saved:
             if print_freq is not None:
-                logger.log("Restored model with mean reward: {}".format(saved_mean_reward))
+                logger.log("Restored model with mean reward: {}".format(saved_mean_reward_diff))
             U.load_state(model_file)
 
     return ActWrapper(act, act_params)
