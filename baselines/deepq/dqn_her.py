@@ -263,7 +263,7 @@ def learn(env,
                 logger.dump_tabular()
 
             if (checkpoint_freq is not None and t > learning_starts and
-                    num_episodes > 100 and t % checkpoint_freq == 0):
+                    num_episodes > 100 and num_episodes % checkpoint_freq == 0):
                 if saved_mean_reward_diff is None or mean_100ep_max_reward-mean_100ep_reward < saved_mean_reward_diff:
                     if print_freq is not None:
                         logger.log("Saving model due to mean reward difference decrease: {} -> {}".format(
