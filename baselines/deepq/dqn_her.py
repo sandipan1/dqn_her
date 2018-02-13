@@ -208,7 +208,8 @@ def learn(env,
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
         model_file = os.path.join(td, "model")
-        episode_buffer = []
+        episode_buffer = [None]*env.n
+        episode_timestep = 0
         for t in range(max_timesteps):
             if callback is not None:
                 if callback(locals(), globals()):
@@ -217,7 +218,8 @@ def learn(env,
             action = act(np.concatenate([obs,env.goal])[None], update_eps=exploration.value(t))[0]
             new_obs, rew, done, _ = env.step(action)
             # Store transition in the replay buffer.
-            episode_buffer.append((obs, action, rew, new_obs, float(done)))
+            episode_buffer[episode_timestep]=(obs, action, rew, new_obs, float(done))
+            episode_timestep+=1
             replay_buffer.add(np.concatenate([obs,env.goal]), action, rew, np.concatenate([new_obs,env.goal]), float(done))
             obs = new_obs
             episode_rewards[-1] += rew
@@ -225,11 +227,11 @@ def learn(env,
             #######end of episode
             if done:
                 goal_prime = obs
-                for episode in episode_buffer:
-                    obs1,action1,_,new_obs1,done1 = episode
+                for episode in range(episode_timestep):
+                    obs1,action1,_,new_obs1,done1 = episode_buffer[episode]
                     rew1 = env.calculate_reward(new_obs1,goal_prime)
                     replay_buffer.add(np.concatenate([obs1,goal_prime]), action1, rew1, np.concatenate([new_obs1,goal_prime]), float(done1))
-                episode_buffer.clear()   
+                episode_timestep = 0   
                 obs = env.reset(seed=np.random.randint(0,1000))
                 episode_rewards.append(0.0)
                 episode_max_rewards.append(env.reward_max)
