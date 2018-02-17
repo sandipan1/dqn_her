@@ -26,6 +26,31 @@ def mlp(hiddens=[]):
     """
     return lambda *args, **kwargs: _mlp(hiddens, *args, **kwargs)
 
+def _lstm(hiddens, inpt, num_actions, scope, reuse=False):
+    with tf.variable_scope(scope, reuse=reuse):
+        out = inpt
+        for hidden in hiddens:
+            out =  rnn.LSTMCell(lstm_size)
+            out = layers.fully_connected(out, num_outputs=hidden, activation_fn=tf.nn.relu)
+        out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
+        return out
+
+
+def lstm(hiddens=[]):
+    """This model takes as input an observation and returns values of all actions.
+
+    Parameters
+    ----------
+    hiddens: [int]
+        list of sizes of hidden layers
+
+    Returns
+    -------
+    q_func: function
+        q_function for DQN algorithm.
+    """
+    return lambda *args, **kwargs: _lstm(hiddens, *args, **kwargs)
+
 
 def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
