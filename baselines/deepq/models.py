@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
-
+import numpy as np
 
 def _mlp(hiddens, inpt, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
@@ -26,15 +26,18 @@ def mlp(hiddens=[]):
     """
     return lambda *args, **kwargs: _mlp(hiddens, *args, **kwargs)
 
-def _lstm(hiddens, inpt, num_actions, scope, reuse=False):
+def lstm_cell(lstm_size):
+        return tf.contrib.rnn.BasicLSTMCell(lstm_size)
+  
+def _lstm(hiddens, inpt, num_actions,scope,lstm_state=None,reuse=tf.AUTO_REUSE):
     with tf.variable_scope(scope, reuse=reuse):
-        out = inpt
-        for hidden in hiddens:
-            out =  rnn.LSTMCell(lstm_size)
-            out = layers.fully_connected(out, num_outputs=hidden, activation_fn=tf.nn.relu)
-        out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
-        return out
-
+        stacked_lstm = tf.contrib.rnn.MultiRNNCell([lstm_cell(hidden) for hidden in hiddens])
+        if(lstm_state==None):
+          lstm_state = stacked_lstm.zero_state(inpt.shape[0],dtype=tf.float32)
+        out = tf.cast(inpt.reshape(inpt.shape[0],1,inpt.shape[1]),tf.float32)
+        outputs, state = tf.nn.dynamic_rnn(cell=stacked_lstm,inputs=out,initial_state=lstm_state,dtype=tf.float32)
+        out = tf.contrib.layers.fully_connected(out[:,0,:], num_outputs=num_actions, activation_fn=None)
+        return out,state
 
 def lstm(hiddens=[]):
     """This model takes as input an observation and returns values of all actions.
@@ -50,7 +53,6 @@ def lstm(hiddens=[]):
         q_function for DQN algorithm.
     """
     return lambda *args, **kwargs: _lstm(hiddens, *args, **kwargs)
-
 
 def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
