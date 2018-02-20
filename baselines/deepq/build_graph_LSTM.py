@@ -71,7 +71,7 @@ import tensorflow as tf
 import baselines.common.tf_util as U
 
 
-def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
+def build_act(make_obs_ph,make_lstm_ph, q_func, num_actions, scope="deepq", reuse=None):
     """Creates the act function:
 
     Parameters
@@ -103,12 +103,13 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
     """
     with tf.variable_scope(scope, reuse=reuse):
         observations_ph = U.ensure_tf_input(make_obs_ph("observation"))
+        reset_lstm_ph = U.ensure_tf_input(make_lstm_ph("reset_lstm"))
         stochastic_ph = tf.placeholder(tf.bool, (), name="stochastic")
         update_eps_ph = tf.placeholder(tf.float32, (), name="update_eps")
 
         eps = tf.get_variable("eps", (), initializer=tf.constant_initializer(0))
 
-        q_values = q_func(observations_ph.get(), num_actions, scope="q_func")
+        q_values = q_func(observations_ph.get(), num_actions, scope="q_func",reset_lstm_ph.get())
         deterministic_actions = tf.argmax(q_values, axis=1)
 
         batch_size = tf.shape(observations_ph.get())[0]
@@ -119,14 +120,14 @@ def build_act(make_obs_ph, q_func, num_actions, scope="deepq", reuse=None):
         output_actions = tf.cond(stochastic_ph, lambda: stochastic_actions, lambda: deterministic_actions)
         update_eps_expr = eps.assign(tf.cond(update_eps_ph >= 0, lambda: update_eps_ph, lambda: eps))
 
-        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph],
+        act = U.function(inputs=[observations_ph, stochastic_ph, update_eps_ph,reset_lstm_ph],
                          outputs=output_actions,
                          givens={update_eps_ph: -1.0, stochastic_ph: True},
                          updates=[update_eps_expr])
         return act
 
 
-def build_train(make_obs_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0, double_q=True, scope="deepq", reuse=None):
+def build_train(make_obs_ph,make_lstm_ph, q_func, num_actions, optimizer, grad_norm_clipping=None, gamma=1.0, double_q=True, scope="deepq", reuse=None):
     """Creates the train function:
 
     Parameters
