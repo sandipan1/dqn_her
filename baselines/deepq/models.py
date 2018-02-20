@@ -26,34 +26,72 @@ def mlp(hiddens=[]):
     """
     return lambda *args, **kwargs: _mlp(hiddens, *args, **kwargs)
 
+################################ Code for LSTM update starts here
+def static_vars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+
 def lstm_cell(lstm_size):
-        return tf.contrib.rnn.BasicLSTMCell(lstm_size)
-  
-def _lstm(hiddens, inpt, num_actions,scope,lstm_state=None,reuse=tf.AUTO_REUSE):
+  return tf.contrib.rnn.BasicLSTMCell(lstm_size)
+
+def multi_lstm_cell(hiddens):
+  return tf.contrib.rnn.MultiRNNCell([lstm_cell(hidden) for hidden in hiddens])
+
+def get_state_variables(batch_size, cell):
+  # For each layer, get the initial state and make a variable out of it
+    # to enable updating its value.
+    state_variables = []
+    count = 0
+    for state_c, state_h in cell.zero_state(batch_size, tf.float32):
+        state_variables.append(tf.contrib.rnn.LSTMStateTuple(
+            tf.get_variable("state_c-{:d}-{:d}".format(batch_size,count),initializer=state_c, trainable=False),
+            tf.get_variable("state_h-{:d}-{:d}".format(batch_size,count),initializer=state_h, trainable=False)))
+        count +=1
+    # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
+    return tuple(state_variables)
+
+
+def get_state_update_op(state_variables, new_states):
+    # Add an operation to update the train states with the last state tensors
+    update_ops = []
+    for state_variable, new_state in zip(state_variables, new_states):
+        # Assign the new state to the state variables on this layer
+        update_ops.extend([state_variable[0].assign(new_state[0]),
+                           state_variable[1].assign(new_state[1])])
+    # Return a tuple in order to combine all update_ops into a single operation.
+    # The tuple's actual value should not be used.
+    return tf.tuple(update_ops)
+
+def get_state_reset_op(state_variables, cell, batch_size):
+    # Return an operation to set each variable in a list of LSTMStateTuples to zero
+    zero_states = cell.zero_state(batch_size, tf.float32)
+    return get_state_update_op(state_variables, zero_states)
+
+@static_vars(lstm_state=None)
+def _lstm(cell, inpt, num_actions,scope,reset_lstm_state=False,reuse=tf.AUTO_REUSE):
     with tf.variable_scope(scope, reuse=reuse):
-        stacked_lstm = tf.contrib.rnn.MultiRNNCell([lstm_cell(hidden) for hidden in hiddens])
-        if(lstm_state==None):
-          lstm_state = stacked_lstm.zero_state(inpt.shape[0],dtype=tf.float32)
-        out = tf.cast(inpt.reshape(inpt.shape[0],1,inpt.shape[1]),tf.float32)
-        outputs, state = tf.nn.dynamic_rnn(cell=stacked_lstm,inputs=out,initial_state=lstm_state,dtype=tf.float32)
-        out = tf.contrib.layers.fully_connected(out[:,0,:], num_outputs=num_actions, activation_fn=None)
-        return out,state
+        batch_size = inpt.shape[0]
+        out = tf.cast(inpt.reshape(batch_size,1,inpt.shape[1]),tf.float32)
+        if(_lstm.lstm_state == None):
+          _lstm.lstm_state = get_state_variables(batch_size,cell)
+        reset_op = None
+        if(reset_lstm_state == True):
+          reset_op = get_state_reset_op(_lstm.lstm_state,cell,batch_size)
+        with tf.control_dependencies(reset_op):
+          out,state = tf.nn.dynamic_rnn(cell=cell,inputs=out,initial_state=_lstm.lstm_state,dtype=tf.float32)
+          update_op = get_state_update_op(_lstm.lstm_state,state)
+          with tf.control_dependencies(update_op):
+            out = tf.contrib.layers.fully_connected(out[:,0,:], num_outputs=num_actions, activation_fn=None)      
+        return out
 
-def lstm(hiddens=[]):
-    """This model takes as input an observation and returns values of all actions.
+def lstm(hiddens):
+    cell = multi_lstm_cell(hiddens)
+    return lambda *args, **kwargs: _lstm(cell,*args, **kwargs)
 
-    Parameters
-    ----------
-    hiddens: [int]
-        list of sizes of hidden layers
-
-    Returns
-    -------
-    q_func: function
-        q_function for DQN algorithm.
-    """
-    return lambda *args, **kwargs: _lstm(hiddens, *args, **kwargs)
-
+########################## Code for LSTM update ends here
 def _cnn_to_mlp(convs, hiddens, dueling, inpt, num_actions, scope, reuse=False):
     with tf.variable_scope(scope, reuse=reuse):
         out = inpt
